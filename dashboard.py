@@ -9,12 +9,25 @@ from sklearn.compose import ColumnTransformer
 from sklearn.pipeline import Pipeline
 from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay, roc_curve, roc_auc_score
 
+import requests
+import io
+
 st.set_page_config(layout="wide")
 st.title("\U0001F50E Credit Card Fraud & Risk Analytics Dashboard")
-
 @st.cache_data
 def load_data():
-    df = pd.read_pickle("AIML_Dataset.pkl")
+    s3_url = "https://ceditcard-fraud-detection-data.s3.us-east-2.amazonaws.com/AIML_Dataset.pkl"
+    print(" Loading dataset from S3...")
+    response = requests.get(s3_url)
+
+        
+    # Check if file was fetched successfully
+    if response.status_code != 200:
+        st.error("Failed to load dataset from S3.")
+        st.stop()
+
+    df = pd.read_pickle(io.BytesIO(response.content))
+    
     df['hour'] = df['step'] % 24
     df['balance_diffOrg'] = df['oldbalanceOrg'] - df['newbalanceOrig']
     df['balance_diffDest'] = df['oldbalanceDest'] - df['newbalanceDest']
@@ -24,6 +37,7 @@ def load_data():
         (df['type'].isin(['TRANSFER', 'CASH_OUT'])).astype(int)
     )
     return df
+
 
 df = load_data()
 
